@@ -75,3 +75,23 @@ spring:
 Configure this properties in the application.yml and this gave you a basic authentication user:passsword form from springsecurity
 
 
+```java
+@Configuration
+@EnableWebSecurity
+@Order(2)
+public class BasicSecurityConfiguration extends WebSecurityConfigurerAdapter {
+	@Override
+	protected void configure(HttpSecurity http) throws Exception {
+		http.authorizeRequests()
+				.anyRequest().authenticated()
+				.and() .httpBasic();
+	}
+
+}
+```
+
+Applying this Configuration Class. The endpoint will be prompt a basic authentication modal provided by navigator.
+
+
+
+
