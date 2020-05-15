@@ -12,6 +12,10 @@ It is the de-facto standard for securing Spring-based applications.
 Spring Security is a framework that focuses on providing both authentication and authorization to Java applications.
 Like all Spring projects, the real power of Spring Security is found in how easily it can be extended to meet custom requirements.
 
+We take a look at the way security is applied in web applications using filters and more generally using method annotations.
+Use this guide when you need to understand at a high level how a secure application works, and how it can be customized,
+or if you just need to learn how to think about application security.
+
 ## Features
   - Comprehensive and extensible support for both Authentication and Authorization
 
@@ -22,6 +26,59 @@ Like all Spring projects, the real power of Spring Security is found in how easi
   - Optional integration with Spring Web MVC
 
   - Much more…
+
+## Authentication
+The main strategy interface for authentication is AuthenticationManager which only has one method:
+
+```java
+public interface AuthenticationManager {
+
+  Authentication authenticate(Authentication authentication)
+    throws AuthenticationException;
+
+}
+```
+
+An AuthenticationManager can do one of 3 things in its authenticate() method:
+
+  - return an Authentication (normally with authenticated=true) if it can verify that the input represents a valid principal.
+
+  - throw an AuthenticationException if it believes that the input represents an invalid principal.
+
+  - return null if it can’t decide.
+
+AuthenticationException is a runtime exception. It is usually handled by an application in a generic way, depending
+on the style or purpose of the application. In other words user code is not normally expected to catch and handle it.
+For example, a web UI will render a page that says that the authentication failed, and a backend HTTP service
+will send a 401 response, with or without a WWW-Authenticate header depending on the context.
+
+The most commonly used implementation of AuthenticationManager is ProviderManager, which delegates to a chain of
+AuthenticationProvider instances. An AuthenticationProvider is a bit like an AuthenticationManager but it has an
+extra method to allow the caller to query if it supports a given Authentication type:
+
+```java
+public interface AuthenticationProvider {
+
+	Authentication authenticate(Authentication authentication)
+			throws AuthenticationException;
+
+	boolean supports(Class<?> authentication);
+
+}
+```
+
+The Class<?> argument in the supports() method is really Class<? extends Authentication> (it will only ever be asked
+if it supports something that will be passed into the authenticate() method). A ProviderManager can support multiple
+different authentication mechanisms in the same application by delegating to a chain of AuthenticationProviders.
+If a ProviderManager doesn’t recognise a particular Authentication instance type it will be skipped.
+
+A ProviderManager has an optional parent, which it can consult if all providers return null. If the parent is
+not available then a null Authentication results in an AuthenticationException.
+
+Sometimes an application has logical groups of protected resources
+(e.g. all web resources that match a path pattern /api/**), and each group can have its
+own dedicated AuthenticationManager. Often, each of those is a ProviderManager, and they share a parent.
+The parent is then a kind of "global" resource, acting as a fallback for all providers.
 
 ## Creating an Unsecured End Point
 Before we can apply security to an application, is needed a single end point to secure.
@@ -92,6 +149,17 @@ public class BasicSecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 Applying this Configuration Class. The endpoint will be prompt a basic authentication modal provided by navigator.
 
+## Digest Authentication
+Digest access authentication is one of the agreed-upon methods a web server can use to negotiate credentials, such as
+username or password, with a user's web browser. This can be used to confirm the identity of a user before sending
+sensitive information, such as online banking transaction history. It applies a hash function to the username and
+password before sending them over the network. In contrast, basic access authentication uses the easily reversible
+Base64 encoding instead of hashing, making it non-secure unless used in conjunction with TLS.
 
+Technically, digest authentication is an application of MD5 cryptographic hashing with usage of nonce values to prevent
+replay attacks. It uses the HTTP protocol.
+
+Spring Security does have full out of the box support for the Digest authentication mechanism, this support is not as well
+integrated into the namespace as Basic Authentication.
 
 
