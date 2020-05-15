@@ -163,3 +163,21 @@ Spring Security does have full out of the box support for the Digest authenticat
 integrated into the namespace as Basic Authentication.
 
 
+This example transaction consists of the following steps:
+
+  - The client asks for http://localhost:9090/admin/hello?name=marcomarco that requires authentication but does not provide
+a username and password. Typically this is because the user simply entered the address or followed a link to the page.
+
+  - The server responds with the 401 "Unauthorized" response code, providing the authentication realm and a randomly generated,
+single-use value called a nonce.
+WWW-Authenticate: Digest realm="admin-digest-realm", qop="auth", nonce="MTU4OTU1MDc0MTg0OTpkM2Q4YWVmZjBjYmNkZDVmMWIxODIzNDhjZGExN2JjNw=="
+
+  - At this point, the browser will present the authentication realm (typically a description of the computer or system being accessed)
+to the user and prompt for a username and password. The user may decide to cancel at this point.
+
+  - Once a username=admini and password=secret have been supplied, the client re-sends the same request but adds an authentication
+   header that includes the response code.
+
+  - In this example, the server accepts the authentication and the page is returned. If the username is invalid and/or
+ the password is incorrect, the server might return the "401" response code and the client would prompt the user again.
+
