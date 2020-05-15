@@ -42,7 +42,7 @@ as the following listing shows:
 ```gradle
 implementation 'org.springframework.boot:spring-boot-starter-security'
 implementation 'org.springframework.security:spring-security-test'
-``
+```
 Try to access http://localhost:8080/hello?name=marcomarco
 The server return http 302 code, that means, the target resource resides temporarily under a different URI.
 Since the redirection might be altered on occasion,  the client ought to continue to use the effective request URI for future requests.
