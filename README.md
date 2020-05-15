@@ -39,7 +39,7 @@ need to do is add Spring Security to the classpath.
 With Gradle, you need to add two lines (one for the application and one for testing) in the dependencies closure in build.gradle,
 as the following listing shows:
 
-````java
+```gradle
 implementation 'org.springframework.boot:spring-boot-starter-security'
 implementation 'org.springframework.security:spring-security-test'
 ``
