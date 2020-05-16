@@ -393,21 +393,22 @@ the filters, for that we will see how, an htttp request that enters our end poin
    2.- The request is forwarded DelegatingFilterProxy.invoke -> FilterChainProxy[Default Chain: "any request".  
 ```json
       "Filter Chains": [
-            [ "any request", [org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@61840471,
-                            org.springframework.security.web.context.SecurityContextPersistenceFilter@62ff049b,
-                            org.springframework.security.web.header.HeaderWriterFilter@122bd271, 
-                            org.springframework.security.web.csrf.CsrfFilter@36f4823d, 
-                            org.springframework.security.web.authentication.logout.LogoutFilter@67069bc5, 
-                            org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@3bf81f91, 
-                            org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@9312439, 
-                            org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@677f4e40, 
-                            org.springframework.security.web.authentication.www.BasicAuthenticationFilter@3dfea4e0, 
-                            org.springframework.security.web.savedrequest.RequestCacheAwareFilter@10374f12, 
-                            org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@4e12eaf9, 
-                            org.springframework.security.web.authentication.AnonymousAuthenticationFilter@653802e7, 
-                            org.springframework.security.web.session.SessionManagementFilter@1e43e2d7, 
-                            org.springframework.security.web.access.ExceptionTranslationFilter@64f406c3, 
-                            org.springframework.security.web.access.intercept.FilterSecurityInterceptor@72998353]]]]
+            [ "any request": ["org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter",
+                            org.springframework.security.web.context.SecurityContextPersistenceFilter,
+                            org.springframework.security.web.header.HeaderWriterFilter, 
+                            org.springframework.security.web.csrf.CsrfFilter, 
+                            org.springframework.security.web.authentication.logout.LogoutFilter, 
+                            org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter, 
+                            org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter, 
+                            org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter, 
+                            org.springframework.security.web.authentication.www.BasicAuthenticationFilter, 
+                            org.springframework.security.web.savedrequest.RequestCacheAwareFilter, 
+                            org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter, 
+                            org.springframework.security.web.authentication.AnonymousAuthenticationFilter, 
+                            org.springframework.security.web.session.SessionManagementFilter, 
+                            org.springframework.security.web.access.ExceptionTranslationFilter, 
+                            org.springframework.security.web.access.intercept.FilterSecurityInterceptor]
+                            ]]]
 ```
 
 **WebAsyncManagerIntegrationFilter**: Provides integration between the **SecurityContext** and Spring Web's **WebAsyncManager** by 
