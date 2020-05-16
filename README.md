@@ -391,27 +391,27 @@ the filters, for that we will see how, an htttp request that enters our end poin
   - The request is received firstly by the **DelegatingFilterProxy** this is a a standard Servlet Filter to delegating to
   - The request is forwarded DelegatingFilterProxy.invoke -> FilterChainProxy[Default Chain: "any request".  
 ```json
-  "Filter Chains": [
-        [ "any request": ["org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter",
-                        "org.springframework.security.web.context.SecurityContextPersistenceFilter",
-                        "org.springframework.security.web.header.HeaderWriterFilter", 
-                        "org.springframework.security.web.csrf.CsrfFilter", 
-                        "org.springframework.security.web.authentication.logout.LogoutFilter", 
-                        "org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter", 
-                        "org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter", 
-                        "org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter", 
-                        "org.springframework.security.web.authentication.www.BasicAuthenticationFilter", 
-                        "org.springframework.security.web.savedrequest.RequestCacheAwareFilter", 
-                        "org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter", 
-                        "org.springframework.security.web.authentication.AnonymousAuthenticationFilter", 
-                        "org.springframework.security.web.session.SessionManagementFilter", 
-                        "org.springframework.security.web.access.ExceptionTranslationFilter", 
-                        "org.springframework.security.web.access.intercept.FilterSecurityInterceptor"]
-                        ]]]
+"Filter Chains": [
+    [ "any request": ["org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter",
+                    "org.springframework.security.web.context.SecurityContextPersistenceFilter",
+                    "org.springframework.security.web.header.HeaderWriterFilter", 
+                    "org.springframework.security.web.csrf.CsrfFilter", 
+                    "org.springframework.security.web.authentication.logout.LogoutFilter", 
+                    "org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter", 
+                    "org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter", 
+                    "org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter", 
+                    "org.springframework.security.web.authentication.www.BasicAuthenticationFilter", 
+                    "org.springframework.security.web.savedrequest.RequestCacheAwareFilter", 
+                    "org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter", 
+                    "org.springframework.security.web.authentication.AnonymousAuthenticationFilter", 
+                    "org.springframework.security.web.session.SessionManagementFilter", 
+                    "org.springframework.security.web.access.ExceptionTranslationFilter", 
+                    "org.springframework.security.web.access.intercept.FilterSecurityInterceptor"]
+                    ]]]
 ```
 
-**WebAsyncManagerIntegrationFilter**: Provides integration between the **SecurityContext** and Spring Web's **WebAsyncManager** by 
-using the method:
+#### WebAsyncManagerIntegrationFilter
+Provides integration between the **SecurityContext** and Spring Web's **WebAsyncManager** by using the method:  
 SecurityContextCallableProcessingInterceptor.beforeConcurrentHandling(org.springframework.web.context.request.NativeWebRequest, Callable)
 to populate the **SecurityContext** on the Callable. Filter base class that aims to _`guarantee a single execution per request`_ 
 dispatch, on any servlet container. It provides  _`doFilterInternal()`_ method with **HttpServletRequest** and **HttpServletResponse** arguments.  
@@ -419,7 +419,8 @@ Subclasses may use _`isAsyncDispatch(HttpServletRequest)`_ to determine when a f
 and use _`isAsyncStarted(HttpServletRequest)`_ to determine when the request has been placed in async mode and therefore 
 the current dispatch won't be the last one for the given request. see more in API Docs.  
 
-**SecurityContextPersistenceFilter**: Populates the **SecurityContextHolder** with information obtained from the configured
+#### SecurityContextPersistenceFilter
+Populates the **SecurityContextHolder** with information obtained from the configured
 **SecurityContextRepository** prior to the request and stores it back in the repository once the request has completed and
 clearing the context holder. By default it uses an **HttpSessionSecurityContextRepository**. See this class for information 
 **HttpSession** related configuration options.  
@@ -431,33 +432,38 @@ to a separate strategy, allowing for more customization in the way the security 
 The _`forceEagerSessionCreation property`_ can be used to ensure that a session is always available before the filter 
 chain executes (the default is false, as this is resource intensive and not recommended).
 
-**HeaderWriterFilter** Filter implementation to add headers to the current request. Can be useful to add certain headers 
+#### HeaderWriterFilter
+Filter implementation to add headers to the current request. Can be useful to add certain headers 
 which enable browser protection. Like _`X-Frame-Options, X-XSS-Protection and X-Content-Type-Options`_.
 
-**CsrfFilter** Applies Cross-site request forgery (CSRF) protection using a synchronizer token pattern.
+#### CsrfFilter 
+Applies Cross-site request forgery (CSRF) protection using a synchronizer token pattern.
 Developers are required to ensure that CsrfFilter is invoked for any request that allows state to change. 
 Typically this just means that they should ensure their web application follows proper REST semantics 
 (i.e. do not change state with the HTTP methods GET, HEAD, TRACE, OPTIONS).  
+Typically the **CsrfTokenRepository** implementation chooses to store the CsrfToken in **HttpSession** with 
+**HttpSessionCsrfTokenRepository**. This is preferred to storing the token in a cookie which can be modified by a client application.
 
-Typically the CsrfTokenRepository implementation chooses to store the CsrfToken in HttpSession with HttpSessionCsrfTokenRepository. This is preferred to storing the token in a cookie which can be modified by a client application.
-
-**OncePerRequestFilter** Filter base class that aims to guarantee a single execution per request dispatch, on any 
+#### OncePerRequestFilter
+Filter base class that aims to guarantee a single execution per request dispatch, on any 
 servlet container. It provides a _`doFilterInternal`_ method with **HttpServletRequest** and **HttpServletResponse** arguments.  
-As of Servlet 3.0, a filter may be invoked as part of a javax.servlet.DispatcherType#REQUEST REQUESTor
-javax.servlet.DispatcherType#ASYNC ASYNC dispatches that occur in separate threads. A filter can be configured in 
+As of Servlet 3.0, a filter may be invoked as part of a _`javax.servlet.DispatcherType#REQUEST`_ REQUESTor
+_`javax.servlet.DispatcherType#ASYNC`_ ASYNC dispatches that occur in separate threads. A filter can be configured in 
 whether it should be involved in async dispatches. However, in some cases servlet containers assume different default 
-configuration. Therefore sub-classes can override the method shouldNotFilterAsyncDispatch() to declare statically if 
+configuration. Therefore sub-classes can override the method _`shouldNotFilterAsyncDispatch()`_ to declare statically if 
 they should indeed be invoked, once, during both types  of dispatches in order to provide thread initialization, 
 logging, security, and so on. This mechanism complements and does not replace the need to configure a filter 
 with dispatcher types.  see more in API Docs. 
 
-**LogoutFilter** Logs a principal out. Polls a series of **LogoutHandlers**. The handlers should be specified in the order 
+#### LogoutFilter 
+Logs a principal out. Polls a series of **LogoutHandlers**. The handlers should be specified in the order 
 they are required. Generally you will want to call logout handlers **TokenBasedRememberMeServices** and **SecurityContextLogoutHandler** 
 (in that order). After logout, a redirect will be performed to the URL determined by either the configured 
 **LogoutSuccessHandler** or the **logoutSuccessUrl**, depending on which constructor was used.
   
   
-**AbstractAuthenticationProcessingFilter** Abstract processor of browser-based HTTP-based authentication requests.  
+#### AbstractAuthenticationProcessingFilter
+Abstract processor of browser-based HTTP-based authentication requests.  
 ###### Authentication Process
 The filter requires that you set the _`authenticationManager property`_. An **AuthenticationManager** is required to process 
 the _`authentication request tokens`_ created by implementing classes. This filter will intercept a request and attempt to 
@@ -487,19 +493,22 @@ _`attemptAuthentication()`_. Different implementations can be injected to enable
 prevention or to _`control the number of simultaneous sessions`_ a principal may have.  
   
 
-**DefaultLoginPageGeneratingFilter**
+#### DefaultLoginPageGeneratingFilter
 For internal use with namespace configuration in the case where a user doesn't configure a login page. 
 The configuration code will insert this filter in the chain instead. Will only work if a redirect is used to the login page.  
 
-**OncePerRequestFilter** Filter base class that aims to guarantee a single execution per request dispatch, on any servlet 
+#### OncePerRequestFilter 
+Filter base class that aims to guarantee a single execution per request dispatch, on any servlet 
 container. It provides a doFilterInternal method with HttpServletRequest and HttpServletResponse arguments.  see more in API Docs.  
 
-**RequestCacheAwareFilter** Responsible for reconstituting the saved request if one is cached and it _`matches the current request`_.  
+#### RequestCacheAwareFilter 
+Responsible for reconstituting the saved request if one is cached and it _`matches the current request`_.  
 It will call _`RequestCache#getMatchingRequest(HttpServletRequest, HttpServletResponse) getMatchingRequest`_ on the 
 configured **RequestCache**. If the method returns a value (a wrapper of the saved request), it will pass this to the filter chain's
 doFilter method. If null is returned by the cache, the original request is used and the filter has no effect.  
 
-**SecurityContextHolderAwareRequestFilter** A **Filter** which populates the ServletRequest with a _`request wrapper which implements the 
+#### SecurityContextHolderAwareRequestFilter
+A **Filter** which populates the ServletRequest with a _`request wrapper which implements the 
 servlet API security methods`_. **SecurityContextHolderAwareRequestWrapper** is extended to provide the following additional methods:  
 **HttpServletRequest**#_`authenticate(HttpServletResponse)`_ - Allows the user to determine if they are authenticated and if not send the user 
 to the login page. See #_`setAuthenticationEntryPoint(AuthenticationEntryPoint)`_.  
@@ -508,13 +517,16 @@ to the login page. See #_`setAuthenticationEntryPoint(AuthenticationEntryPoint)`
 **AsyncContext**#s*`tart(Runnable)`* - Automatically copy the **SecurityContext**  from the  **SecurityContextHolder**  found on the **Thread** that
  invoked **AsyncContext**#_`start(Runnable)`_ to the Thread that processes the Runnable.  
  
-**AnonymousAuthenticationFilter** Detects if there is no **Authentication** object in the **SecurityContextHolder**, and populates it with one if needed.  
+#### AnonymousAuthenticationFilter 
+Detects if there is no **Authentication** object in the **SecurityContextHolder**, and populates it with one if needed.  
 
-**SessionManagementFilter** Detects that a user has been authenticated since the start of the request and, if they
+#### SessionManagementFilter 
+Detects that a user has been authenticated since the start of the request and, if they
 have, calls the configured SessionAuthenticationStrategy to perform any session-related activity such as activating 
 session-fixation protection mechanisms or checking for multiple concurrent logins.
 
-**ExceptionTranslationFilter** Handles any **AccessDeniedException** and **AuthenticationException** thrown within the filter chain.  
+#### ExceptionTranslationFilter 
+Handles any **AccessDeniedException** and **AuthenticationException** thrown within the filter chain.  
 This filter is necessary because it _`provides the bridge between Java exceptions and HTTP responses`_. It is solely concerned 
 with maintaining the user interface. This filter does not do any actual security enforcement.  
 If an **AuthenticationException** is detected, the filter _`will launch the authenticationEntryPoint`_. This allows common handling 
@@ -529,7 +541,8 @@ an **AuthenticationException** is detected. Note that this may also _`switch the
    - _`requestCache`_ determines the strategy _`used to save a request during the authentication process`_ in order 
    that it m*`ay be retrieved and reused once`* the user has authenticated. The default implementation is **HttpSessionRequestCache**.
 
-**FilterSecurityInterceptor** Performs security handling of HTTP resources via a filter implementation.
+#### FilterSecurityInterceptor 
+Performs security handling of HTTP resources via a filter implementation.
 **AbstractSecurityInterceptor** base class for **FilterSecurityInterceptor** Abstract class that implements security interception 
 for secure objects. The **AbstractSecurityInterceptor** will _`ensure the proper startup configuration_ `of the security interceptor. 
 It will also implement the proper handling of secure object invocations, namely:  
