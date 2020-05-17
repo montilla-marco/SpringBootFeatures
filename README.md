@@ -1,6 +1,6 @@
 # Getting Started
 
-#### Update gradle wrapper to min required
+#### Update gradle wrapper to min required if needed
 '''sh
 ./gradlew wrapper --gradle-version=4.10 --distribution-type=bin
 '''
@@ -568,7 +568,159 @@ It will also implement the proper handling of secure object invocations, namely:
         The **AbstractSecurityInterceptor** will take no further action when _`its afterInvocation(InterceptorStatusToken, Object)_ `is called.
   - Control again returns to the concrete subclass, along with the Object that should be returned to the caller. 
     The subclass will then return that result or exception to the original caller.
+    
+## How does works Spring AutoConfiguration for Security
+If you work in a company that develops shared libraries, or if you work on an open-source or commercial library, 
+you might want to develop your own auto-configuration. Auto-configuration classes can be bundled in external 
+jars and still be picked-up by Spring Boot.  
 
+Auto-configuration can be associated to a “starter” that provides the auto-configuration code as well as the typical 
+libraries that you would use with it. We first cover what you need to know to build your own auto-configuration 
+and then we move on to the typical steps required to create a custom starter.  
+
+### Understanding Auto-configured Beans
+Under the hood, auto-configuration is implemented with standard **@Configuration** classes. Additional **@Conditional** 
+annotations are used to constrain when the auto-configuration should apply. Usually, auto-configuration classes 
+use **@ConditionalOnClass** and **@ConditionalOnMissingBean** annotations. This ensures that auto-configuration applies 
+only when relevant classes are found and when you have not declared your own **@Configuration**.  
+    
+You can browse the source code of spring-boot-autoconfigure to see the **@Configuration** classes that Spring provides 
+(see the META-INF/spring.factories file).
+
+### Locating Auto-configuration Security Classes
+Spring Boot checks for the presence of a META-INF/spring.factories file within your published jar. 
+The file should list your configuration classes under the EnableAutoConfiguration key, as shown in the following example:  
+
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.reactive.ReactiveSecurityAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.reactive.ReactiveUserDetailsServiceAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.rsocket.RSocketSecurityAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyAutoConfiguration,\
+org.springframework.boot.autoconfigure.session.SessionAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.oauth2.client.servlet.OAuth2ClientAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.oauth2.client.reactive.ReactiveOAuth2ClientAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration,\
+org.springframework.boot.autoconfigure.security.oauth2.resource.reactive.ReactiveOAuth2ResourceServerAutoConfiguration,\
+
+**NOTE**: Auto-configurations must be loaded that way only. Make sure that they are defined in a specific package 
+space and that they are never the target of component scanning. Furthermore, auto-configuration classes should not 
+enable component scanning to find additional components. Specific **@Imports** should be used instead.  
+
+You can use the **@AutoConfigureAfter** or **@AutoConfigureBefore** annotations if your configuration needs to be 
+applied in a specific order. For example, if you provide web-specific configuration, your class may need to be 
+applied after **WebMvcAutoConfiguration**.  
+
+If you want to order certain auto-configurations that should not have any direct knowledge of each other, you can 
+also use **@AutoConfigureOrder**. That annotation has the same semantic as the regular **@Order** annotation but 
+provides a dedicated order for auto-configuration classes.  
+
+Lets take a look on this classes!!!
+
+#### SecurityAutoConfiguration
+```java
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass(DefaultAuthenticationEventPublisher.class)
+@EnableConfigurationProperties(SecurityProperties.class)
+@Import({ SpringBootWebSecurityConfiguration.class, WebSecurityEnablerConfiguration.class,
+		SecurityDataConfiguration.class })
+public class SecurityAutoConfiguration {
+
+	@Bean
+	@ConditionalOnMissingBean(AuthenticationEventPublisher.class)
+	public DefaultAuthenticationEventPublisher authenticationEventPublisher(ApplicationEventPublisher publisher) {
+		return new DefaultAuthenticationEventPublisher(publisher);
+	}
+
+}
+```
+there are three imported class from this:
+
+##### SpringBootWebSecurityConfiguration
+````java
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnClass(WebSecurityConfigurerAdapter.class)
+@ConditionalOnMissingBean(WebSecurityConfigurerAdapter.class)
+@ConditionalOnWebApplication(type = Type.SERVLET)
+public class SpringBootWebSecurityConfiguration {
+
+	@Configuration(proxyBeanMethods = false)
+	@Order(SecurityProperties.BASIC_AUTH_ORDER)
+	static class DefaultConfigurerAdapter extends WebSecurityConfigurerAdapter {
+
+	}
+
+}
+````
+NOTE: if we define a WebSecurityConfigurerAdapter this autoconfiguration will be ignore.  
+
+###### WebSecurityConfigurerAdapter 
+Provides a convenient base class for creating a **WebSecurityConfigurer** instance. The implementation allows customization 
+by overriding methods.  
+Will automatically apply the result of looking up **AbstractHttpConfigurer** from **SpringFactoriesLoader** to allow 
+developers to extend the defaults. To do this, you must create a class that extends **AbstractHttpConfigurer** and 
+then create a file in the classpath at "META-INF/spring.factories" that looks something like:  
+org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer 
+     = sample.MyClassThatExtendsAbstractHttpConfigurer  
+Put attention in this methods:  
+  - protected AuthenticationManager authenticationManager()  
+  - protected UserDetailsService userDetailsService()  
+  - protected void configure(HttpSecurity http)  
+  
+
+##### WebSecurityEnablerConfiguration
+```java
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnBean(WebSecurityConfigurerAdapter.class)
+@ConditionalOnMissingBean(name = BeanIds.SPRING_SECURITY_FILTER_CHAIN)
+@ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+@EnableWebSecurity
+public class WebSecurityEnablerConfiguration {
+
+}
+```
+
+###### EnableWebSecurity
+Imports **WebSecurityConfiguration**  that Uses a **WebSecurity** to create the **FilterChainProxy** that performs the web
+based security for Spring Security. It then exports the necessary beans. **Customizations** can be made to 
+**WebSecurity** by extending **WebSecurityConfigurerAdapter**  and exposing it as a **Configuration** or implementing
+**WebSecurityConfigurer** and exposing it as a **Configuration**. 
+
+###### WebSecurityConfiguration
+Put attention on:
+```java
+Bean(name = AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME)
+public Filter springSecurityFilterChain() throws Exception {
+    boolean hasConfigurers = webSecurityConfigurers != null
+            && !webSecurityConfigurers.isEmpty();
+    if (!hasConfigurers) {
+        WebSecurityConfigurerAdapter adapter = objectObjectPostProcessor
+                .postProcess(new WebSecurityConfigurerAdapter() {
+                });
+        webSecurity.apply(adapter);
+    }
+    return webSecurity.build();
+}
+```
+
+#### SecurityFilterAutoConfiguration
+**EnableAutoConfiguration** for Spring Security's Filter. Configured separately from SpringBootWebSecurityConfiguration
+to ensure that the filter's order is still configured when a user-provided WebSecurityConfiguration exists.  
+
+```java
+@Bean
+@ConditionalOnBean(name = DEFAULT_FILTER_NAME)
+public DelegatingFilterProxyRegistrationBean securityFilterChainRegistration(
+        SecurityProperties securityProperties) {
+    DelegatingFilterProxyRegistrationBean registration = new DelegatingFilterProxyRegistrationBean(
+            DEFAULT_FILTER_NAME);
+    registration.setOrder(securityProperties.getFilter().getOrder());
+    registration.setDispatcherTypes(getDispatcherTypes(securityProperties));
+    return registration;
+}
+```
 ## Using a Credentials Database
 ```java
 @Configuration
