@@ -1,4 +1,4 @@
-package com.montilla.laboratory.myfeatures.common.tier.exception;
+package com.montilla.laboratory.myfeatures.common.iod.exception;
 
 public interface TierExceptionHandler <S>  {
 
