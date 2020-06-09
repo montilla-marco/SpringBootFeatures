@@ -771,3 +771,126 @@ to the user and prompt for a username and password. The user may decide to cance
   - In this example, the server accepts the authentication and the page is returned. If the username is invalid and/or
  the password is incorrect, the server might return the "401" response code and the client would prompt the user again.
 
+## UserDetailsService
+
+The UserDetailsService is a core interface in Spring Security framework, which is used to retrieve the user’s 
+authentication and authorization information. 
+
+It has a single read-only method named as loadUserByUsername() which locate the user based on the username.
+
+
+# Authorization Server
+Spring Security OAuth2 Boot simplifies standing up an OAuth 2.0 Authorization Server.
+
+## Minimal OAuth2 Boot Configuration
+Creating a minimal Spring Boot authorization server consists of three basic steps:
+  - Including the dependencies.
+  - Including the @EnableAuthorizationServer annotation.
+  - Specifying at least one client ID and secret pair.
+
+### Include Dependency
+To use the auto-configuration features in this library, you need spring-security-oauth2, which has the OAuth 2.0 
+primitives and spring-security-oauth2-autoconfigure. Note that you need to specify the version fo
+r spring-security-oauth2-autoconfigure, since it is not managed by Spring Boot any longer, though it should match Boot’s 
+version anyway.  
+
+For JWT support, you also need spring-security-jwt.  
+ 
+You need to add one dependency to the build.gradle file:
+```groovy
+implementation 'org.springframework.security.oauth:spring-security-oauth2:2.3.3.RELEASE'
+```
+
+### Enabling the Authorization Server
+Similar to other Spring Boot **@Enable** annotations, you can add the **@EnableAuthorizationServer** annotation to 
+the class that contains your configuration, as the following example shows:
+````java
+**@EnableAuthorizationServer**
+@SpringBootApplication
+public class MyfeaturesApplication {
+    
+    public static void main(String[] args) {
+        SpringApplication.run(MyfeaturesApplication.class, args);
+    }
+}
+````
+
+### Specifying a Client and Secret
+By spec, numerous OAuth 2.0 endpoints require client authentication, so you need to specify at least one client in order 
+for anyone to be able to communicate with your authorization server.  
+The following example shows how to specify a client:  
+````yaml
+security:
+  oauth2:
+    client:
+      client-id: first-client
+      client-secret: noonewilleverguess
+````
+
+## How to Make Authorization Code Grant Flow Work
+With the default configuration, while the Authorization Code Flow is technically allowed, it is not completely configured.
+This is because, in addition to what comes pre-configured, the Authorization Code Flow requires:
+  - End users
+  - An end-user login flow, and
+  - A redirect URI registered with the client
+
+### Enabling the Authorization Server
+In a typical Spring Boot application secured by Spring Security, users are defined by a **UserDetailsService**. In that 
+regard, an authorization server is no different, as the following example shows:
+```java
+@EnableWebSecurity
+public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    @Bean
+    @Override
+    public UserDetailsService userDetailsService() {
+        return new InMemoryUserDetailsManager(
+            User.withDefaultPasswordEncoder()
+                .username("enduser")
+                .password("password")
+                .roles("USER")
+                .build());
+    }
+}
+```
+**Note** that, as is typical of a Spring Security web application, _`users are defined`_ in a **WebSecurityConfigurerAdapter** 
+instance.
+
+### Adding an End-User Login Flow
+Incidentally, adding an instance of **WebSecurityConfigurerAdapter** is all we need for now to add a form login flow 
+for end users. However, note that this is where any other configuration regarding the web application itself, 
+not the OAuth 2.0 API, goes.  
+
+If you want to customize the login page, offer more than just form login for the user, or add additional support like 
+password recovery, the **WebSecurityConfigurerAdapter** picks it up.  
+
+### Registering a Redirect URI With the Client
+_`OAuth2 Boot does not support configuring a redirect URI as a property`_ — say, alongside client-id and client-secret.  
+
+To add a redirect URI, you need to specify the client by using either **InMemoryClientDetailsService** or 
+**JdbcClientDetailsService**.  
+
+Doing either means replacing the OAuth2 Boot-provided **AuthorizationServerConfigurer** with your own, as the following 
+example shows: 
+````java
+@EnableAuthorizationServer
+@Configuration
+public class AuthorizationServerConfig extends AuthorizationServerConfigurerAdapter {
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
+    }
+
+    protected void configure(ClientDetailsServiceConfigurer clients) {
+        clients
+            .inMemory()
+                .withClient("first-client")
+                .secret(passwordEncoder().encode("noonewilleverguess"))
+                .scopes("resource:read")
+                .authorizedGrantTypes("authorization_code")
+                .redirectUris("http://localhost:8081/oauth/login/client-app");
+    }
+}
+````
+
+

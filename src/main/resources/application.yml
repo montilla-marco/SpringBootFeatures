@@ -1,11 +1,20 @@
 spring:
-  security:
-    user:
-      name: marco
-      password: secret
+#  security:
+#    user:
+#      name: marco
+#      password: secret
 
   application:
     name: demosecurity
+
+logging:
+  level:
+    org.springframework: DEBUG
+
+user:
+  oauth:
+    clientId: R2dppQ3vPxxxgF72
+    clientSecret: fDw7Mpkk5czHNuSRtmhGmAGL42CaxQB9
 
 server:
   port: 9090
